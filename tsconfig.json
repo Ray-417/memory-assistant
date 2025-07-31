@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",                         // 支持现代 JavaScript
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],   // 支持浏览器 + 最新语法
+    "allowJs": true,                            // 如果用了一些 .js 文件
+    "skipLibCheck": true,
+    "esModuleInterop": true,                    // 兼容旧模块导入
+    "allowSyntheticDefaultImports": true,
+    "strict": true,                             // 开启类型严格模式（可根据需求关闭）
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx"                          // ✅ 关键字段，使用新的 JSX 转换，不需要 `import React from "react"`
+  },
+  "include": ["src"],                           // 你项目源码目录
+  "exclude": ["node_modules"]
+}
