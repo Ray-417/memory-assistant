@@ -17,21 +17,30 @@ export default function ChatWindow() {
         <div className="flex flex-col h-full border-l p-4">
             <div className="flex-1 overflow-y-auto space-y-2">
                 {messages.map((m, i) => (
-                    <div key={i} className={`p-2 rounded ${m.role === "user" ? "bg-blue-100 self-end" : "bg-gray-200 self-start"}`}>
-                        <p>{m.content}</p>
+                    <div
+                        key={i}
+                        className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                    >
+                        <div
+                            className={`p-2 rounded max-w-[75%] ${
+                                m.role === "user" ? "bg-blue-100" : "bg-gray-200"
+                            }`}
+                        >
+                            <p>{m.content}</p>
+                        </div>
                     </div>
                 ))}
-                {loading && <p className="text-sm text-gray-500">Assistant 正在思考...</p>}
+                {loading && <p className="text-sm text-gray-500">Assistant thinking...</p>}
             </div>
             <form onSubmit={handleSubmit} className="flex gap-2 mt-2">
                 <input
                     className="flex-1 border rounded p-2"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="输入 prompt..."
+                    placeholder=" prompt..."
                 />
                 <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
-                    发送
+                    send
                 </button>
             </form>
         </div>
