@@ -38,6 +38,7 @@ export function useChat() {
             const res = await axios.post('http://localhost:8000/api/chat', {
                 messages: [...messages, newMessage],
             });
+            console.log("API response:", res.data);
             setMessages((prev) => [...prev, { role: 'assistant', content: res.data.reply }]);
         } catch (error) {
             console.error('Chat error:', error);
