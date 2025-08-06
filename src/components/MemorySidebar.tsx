@@ -1,12 +1,11 @@
-// src/components/MemorySidebar.tsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import axios from "axios";
 import {
     ChevronRight,
     ChevronDown,
     Plus,
     Settings,
     Trash2,
-    CheckCircle,
     X,
     Pencil,
 } from "lucide-react";
@@ -24,17 +23,11 @@ interface Project {
 }
 
 export default function MemorySidebar() {
-    const [projects, setProjects] = useState<Project[]>([{
-        id: 1,
-        name: "Project A",
-        memories: [
-            { id: 1, title: "Memory 1", content: "This is a long content for memory point 1." },
-            { id: 2, title: "Memory 2", content: "Another content memory." },
-        ],
-    }]);
-
+    const [projects, setProjects] = useState<Project[]>([]);
     const [expandedProjectId, setExpandedProjectId] = useState<number | null>(null);
-    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
+    const [editingProjectName, setEditingProjectName] = useState("");
+    const [editingMemoryId, setEditingMemoryId] = useState<number | null>(null);
     const [newProjectName, setNewProjectName] = useState("");
     const [showNewProjectModal, setShowNewProjectModal] = useState(false);
     const [showManageModal, setShowManageModal] = useState(false);
@@ -42,63 +35,96 @@ export default function MemorySidebar() {
     const [newMemory, setNewMemory] = useState({ title: "", content: "" });
     const [currentProjectId, setCurrentProjectId] = useState<number | null>(null);
 
+    const fetchProjects = async () => {
+        try {
+            const res = await axios.get("http://localhost:8000/api/projects");
+            const projectsWithMemories = await Promise.all(
+                res.data.map(async (project: any) => {
+                    const memoryRes = await axios.get(
+                        `http://localhost:8000/api/projects/${project.id}/memories`
+                    );
+                    return {
+                        id: project.id,
+                        name: project.name,
+                        memories: memoryRes.data,
+                    };
+                })
+            );
+            setProjects(projectsWithMemories);
+        } catch (err) {
+            console.error("Failed to load projects:", err);
+        }
+    };
+
+    useEffect(() => {
+        fetchProjects();
+    }, []);
+
     const toggleProject = (id: number) => {
         setExpandedProjectId(prev => (prev === id ? null : id));
     };
 
-    const handleDelete = (projectId: number, memoryId: number) => {
-        setProjects(prev =>
-            prev.map(project =>
-                project.id === projectId
-                    ? {
-                        ...project,
-                        memories: project.memories.filter(m => m.id !== memoryId),
-                    }
-                    : project
-            )
-        );
+    const handleDelete = async (_projectId: number, memoryId: number) => {
+        try {
+            await axios.delete(`http://localhost:8000/api/memories/${memoryId}`);
+            await fetchProjects();
+        } catch (err) {
+            console.error("Delete failed:", err);
+        }
     };
 
-    const handleEdit = (projectId: number, memoryId: number, updated: Partial<MemoryPoint>) => {
-        setProjects(prev =>
-            prev.map(project =>
-                project.id === projectId
-                    ? {
-                        ...project,
-                        memories: project.memories.map(m =>
-                            m.id === memoryId ? { ...m, ...updated } : m
-                        ),
-                    }
-                    : project
-            )
-        );
-        setEditingId(null);
+    const handleEditMemoryTitle = async (_projectId: number, memoryId: number, newTitle: string) => {
+        try {
+            await axios.put(`http://localhost:8000/api/memories/${memoryId}`, {
+                title: newTitle,
+            });
+            await fetchProjects();
+            setEditingMemoryId(null);
+        } catch (err) {
+            console.error("Edit memory title failed:", err);
+        }
     };
 
-    const handleAddProject = () => {
+    const handleEditProjectName = async (projectId: number, name: string) => {
+        try {
+            await axios.put(`http://localhost:8000/api/projects/${projectId}`, {
+                name,
+            });
+            await fetchProjects();
+            setEditingProjectId(null);
+        } catch (err) {
+            console.error("Edit project name failed:", err);
+        }
+    };
+
+    const handleAddProject = async () => {
         if (!newProjectName.trim()) return;
-        setProjects(prev => [...prev, { id: Date.now(), name: newProjectName, memories: [] }]);
-        setNewProjectName("");
-        setShowNewProjectModal(false);
+        try {
+            await axios.post("http://localhost:8000/api/projects", {
+                name: newProjectName,
+            });
+            await fetchProjects();
+            setNewProjectName("");
+            setShowNewProjectModal(false);
+        } catch (err) {
+            console.error("Add project failed:", err);
+        }
     };
 
-    const handleAddMemory = () => {
-        if (!newMemory.title.trim()) return;
-        setProjects(prev =>
-            prev.map(project =>
-                project.id === currentProjectId
-                    ? {
-                        ...project,
-                        memories: [
-                            ...project.memories,
-                            { id: Date.now(), ...newMemory },
-                        ],
-                    }
-                    : project
-            )
-        );
-        setNewMemory({ title: "", content: "" });
-        setShowAddMemoryModal(false);
+    const handleAddMemory = async () => {
+        if (!newMemory.title.trim() || !currentProjectId) return;
+        try {
+            await axios.post(`http://localhost:8000/api/memories`, {
+                project_id: currentProjectId,
+                title: newMemory.title,
+                content: newMemory.content,
+            });
+            await fetchProjects();
+            setNewMemory({ title: "", content: "" });
+            setShowAddMemoryModal(false);
+        } catch (err) {
+            console.error("Add memory failed:", err);
+        }
     };
 
     return (
@@ -119,18 +145,40 @@ export default function MemorySidebar() {
 
             {projects.map(project => (
                 <div key={project.id} className="mb-4 group">
-                    <div
-                        className="flex items-center justify-between cursor-pointer text-gray-600 hover:bg-gray-100 px-1 py-1 rounded"
-                        onClick={() => toggleProject(project.id)}
-                    >
-                        <div className="flex items-center gap-1">
+                    <div className="flex items-center justify-between cursor-pointer text-gray-600 hover:bg-gray-100 px-1 py-1 rounded">
+                        <div className="flex items-center gap-1" onClick={() => toggleProject(project.id)}>
                             {expandedProjectId === project.id ? (
                                 <ChevronDown size={14} />
                             ) : (
                                 <ChevronRight size={14} />
                             )}
-                            <span className="font-medium">{project.name}</span>
+                            {editingProjectId === project.id ? (
+                                <input
+                                    className="border px-1 py-0.5 rounded text-sm"
+                                    autoFocus
+                                    defaultValue={project.name}
+                                    onBlur={(e) =>
+                                        handleEditProjectName(project.id, e.target.value)
+                                    }
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            handleEditProjectName(project.id, (e.target as HTMLInputElement).value);
+                                        }
+                                    }}
+                                />
+                            ) : (
+                                <span className="font-medium">{project.name}</span>
+                            )}
                         </div>
+                        <button
+                            className="text-gray-400 hover:text-blue-500"
+                            onClick={() => {
+                                setEditingProjectId(project.id);
+                                setEditingProjectName(project.name);
+                            }}
+                        >
+                            <Pencil size={14} />
+                        </button>
                     </div>
 
                     {expandedProjectId === project.id && (
@@ -140,57 +188,56 @@ export default function MemorySidebar() {
                                     key={memory.id}
                                     className="bg-gray-50 p-3 rounded-lg shadow-sm hover:shadow-md border hover:border-gray-300 transition-all"
                                 >
-                                    {editingId === memory.id ? (
-                                        <div className="space-y-2">
+                                    <div className="flex justify-between items-center mb-1">
+                                        {editingMemoryId === memory.id ? (
                                             <input
-                                                className="border w-full px-2 py-1 rounded"
+                                                className="font-semibold text-sm border px-1 py-0.5 rounded w-[60%] max-w-[140px]"
                                                 defaultValue={memory.title}
-                                                onBlur={e =>
-                                                    handleEdit(project.id, memory.id, {
-                                                        title: e.target.value,
-                                                    })
-                                                }
                                                 autoFocus
-                                            />
-                                            <textarea
-                                                className="border w-full px-2 py-1 rounded"
-                                                rows={2}
-                                                defaultValue={memory.content}
-                                                onBlur={e =>
-                                                    handleEdit(project.id, memory.id, {
-                                                        content: e.target.value,
-                                                    })
+                                                onBlur={(e) =>
+                                                    handleEditMemoryTitle(project.id, memory.id, e.target.value)
                                                 }
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                        handleEditMemoryTitle(
+                                                            project.id,
+                                                            memory.id,
+                                                            (e.target as HTMLInputElement).value
+                                                        );
+                                                    }
+                                                }}
                                             />
+                                        ) : (
+                                            <div
+                                                className="font-semibold text-sm border px-1 py-0.5 rounded w-[60%] max-w-[140px]"
+                                                onClick={() => setEditingMemoryId(memory.id)}
+                                            >
+                                                {memory.title}
+                                            </div>
+                                        )}
+
+                                        <div className="flex gap-2">
+                                            <button
+                                                className="text-gray-500 hover:text-red-500"
+                                                onClick={() => handleDelete(project.id, memory.id)}
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                            <button
+                                                className="text-gray-500 hover:text-blue-500"
+                                                onClick={() => setEditingMemoryId(memory.id)}
+                                            >
+                                                <Pencil size={14} />
+                                            </button>
                                         </div>
-                                    ) : (
-                                        <>
-                                            <div className="flex justify-between items-center mb-1">
-                                                <div className="font-semibold text-sm">
-                                                    {memory.title}
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        className="text-gray-500 hover:text-red-500"
-                                                        onClick={() => handleDelete(project.id, memory.id)}
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                    <button
-                                                        className="text-gray-500 hover:text-blue-500"
-                                                        onClick={() => setEditingId(memory.id)}
-                                                    >
-                                                        <Pencil size={14} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="text-xs text-gray-600 truncate">
-                                                {memory.content.length > 100
-                                                    ? memory.content.slice(0, 100) + "..."
-                                                    : memory.content}
-                                            </div>
-                                        </>
-                                    )}
+                                    </div>
+
+                                    {/* 记忆点内容始终显示 */}
+                                    <div className="text-xs text-gray-600 truncate">
+                                        {memory.content.length > 100
+                                            ? memory.content.slice(0, 100) + "..."
+                                            : memory.content}
+                                    </div>
                                 </div>
                             ))}
                             <div
@@ -207,7 +254,7 @@ export default function MemorySidebar() {
                 </div>
             ))}
 
-            {/* 新增项目 Modal */}
+            {/* New Project Modal */}
             {showNewProjectModal && (
                 <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center z-10">
                     <div className="bg-white p-6 rounded-lg shadow-lg w-72 space-y-4">
@@ -233,7 +280,7 @@ export default function MemorySidebar() {
                 </div>
             )}
 
-            {/* 管理项目 Modal */}
+            {/* Manage Modal */}
             {showManageModal && (
                 <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center z-10">
                     <div className="bg-white p-6 rounded-lg shadow-lg w-96 space-y-4">
@@ -254,7 +301,7 @@ export default function MemorySidebar() {
                 </div>
             )}
 
-            {/* 新增记忆点 Modal */}
+            {/* Add Memory Modal */}
             {showAddMemoryModal && (
                 <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center z-10">
                     <div className="bg-white p-6 rounded-lg shadow-lg w-[400px] space-y-4">
