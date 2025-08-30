@@ -41,33 +41,36 @@ export function useChat() {
             );
 
             let aiReply = "";
+            let firstToken = true; // 标记是否是第一次接收
 
-            // SSE 消息事件
             eventSource.onmessage = (event) => {
                 if (event.data === "[DONE]") {
                     eventSource.close();
+                    // 确保最后结束时 loading 也为 false（容错）
                     setLoading(false);
                     return;
                 }
 
                 aiReply += event.data;
 
-                // 实时更新最后一条 assistant 消息
+                // 🔑 第一次收到 token，立刻关闭 loading
+                if (firstToken) {
+                    setLoading(false);
+                    firstToken = false;
+                }
+
                 setMessages((prev) => {
-                    // 如果最后一条是 assistant，就更新它
                     if (prev.length > 0 && prev[prev.length - 1].role === "assistant") {
                         return [
                             ...prev.slice(0, -1),
                             { role: "assistant", content: aiReply }
                         ];
                     } else {
-                        // 否则新增一条 assistant 消息
                         return [...prev, { role: "assistant", content: aiReply }];
                     }
                 });
             };
 
-            // SSE 出错
             eventSource.onerror = (err) => {
                 console.error("SSE error:", err);
                 setMessages((prev) => [...prev, { role: "assistant", content: "⚠️ 出错了，请稍后再试" }]);
