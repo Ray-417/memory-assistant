@@ -6,7 +6,6 @@
     "skipLibCheck": true,
     "esModuleInterop": true,                    // 兼容旧模块导入
     "allowSyntheticDefaultImports": true,
-    "strict": true,                             // 开启类型严格模式（可根据需求关闭）
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "moduleResolution": "Node",

@@ -21,6 +21,7 @@
     "axios": "^1.11.0",
     "json2mq": "^0.2.0",
     "lucide-react": "^0.534.0",
+    "markdown-it": "^14.1.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "zustand": "^5.0.7"

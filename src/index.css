@@ -1,3 +1,24 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+.markdown-body h1 {
+    font-size: 1.8em;
+    font-weight: bold;
+    margin: 1em 0 0.5em;
+}
+
+.markdown-body h2 {
+    font-size: 1.5em;
+    font-weight: bold;
+    margin: 1em 0 0.5em;
+}
+
+.markdown-body h3 {
+    font-size: 1.2em;
+    margin: 0.8em 0 0.4em;
+}
+
+.markdown-body p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
