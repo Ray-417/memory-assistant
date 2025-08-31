@@ -379,7 +379,6 @@ export default function ChatWindow() {
                         continue;
                     }
 
-                    // === 事件分派 ===
                     // 2.1 token 分片
                     if (ev.type === "AIMessageChunk" && ev.content !== undefined) {
                         if (aiKey == null) {
